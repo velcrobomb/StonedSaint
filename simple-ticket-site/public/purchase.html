@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buy Tickets</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a href="/" class="brand">TICKET<span>STUB</span></a>
+  </div>
+
+  <main>
+    <div id="content"></div>
+  </main>
+
+  <script src="events.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const eventId = params.get('id');
+    const ev = EVENTS.find(e => e.id === eventId);
+
+    function renderNotFound() {
+      document.getElementById('content').innerHTML = `<div class="empty">Event not found.</div>`;
+    }
+
+    function renderForm() {
+      const dateStr = new Date(ev.date + 'T00:00:00').toLocaleDateString(undefined, {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+      });
+      document.getElementById('content').innerHTML = `
+        <div class="page-head">
+          <p class="eyebrow">${dateStr}${ev.location ? ' · ' + ev.location : ''}</p>
+          <h1>${ev.title}</h1>
+          <p>${ev.description || ''}</p>
+          <span class="badge">Demo checkout — no real payment is taken</span>
+        </div>
+
+        <div class="order-summary">
+          <div class="field">
+            <label>Full name</label>
+            <input id="f-name" placeholder="Jane Doe">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="f-email" type="email" placeholder="jane@example.com">
+          </div>
+          <div class="field">
+            <label>Number of tickets</label>
+            <input id="f-qty" type="number" min="1" value="1">
+          </div>
+
+          <div class="order-total">
+            <span>Total</span>
+            <span class="mono" id="f-total">$${ev.price.toFixed(2)}</span>
+          </div>
+
+          <button class="btn" style="width:100%;" onclick="submitOrder()">Complete purchase</button>
+          <div id="err" class="error-msg"></div>
+        </div>
+      `;
+      document.getElementById('f-qty').addEventListener('input', updateTotal);
+    }
+
+    function updateTotal() {
+      const qty = Math.max(1, parseInt(document.getElementById('f-qty').value, 10) || 1);
+      document.getElementById('f-total').textContent = `$${(ev.price * qty).toFixed(2)}`;
+    }
+
+    async function submitOrder() {
+      const name = document.getElementById('f-name').value.trim();
+      const email = document.getElementById('f-email').value.trim();
+      const qty = parseInt(document.getElementById('f-qty').value, 10);
+      const errEl = document.getElementById('err');
+      errEl.textContent = '';
+
+      if (!name || !email || !qty || qty < 1) {
+        errEl.textContent = 'Please fill in your name, email, and a valid ticket quantity.';
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Processing…';
+
+      try {
+        const res = await fetch('/api/purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: ev.id,
+            eventTitle: ev.title,
+            name, email,
+            quantity: qty,
+            pricePerTicket: ev.price,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+        renderConfirmation(data.orderId, qty);
+      } catch (e) {
+        errEl.textContent = e.message;
+        btn.disabled = false;
+        btn.textContent = 'Complete purchase';
+      }
+    }
+
+    function renderConfirmation(orderId, qty) {
+      document.getElementById('content').innerHTML = `
+        <div class="page-head">
+          <p class="eyebrow">Order confirmed</p>
+          <h1>You're in</h1>
+          <p>${qty} ticket${qty > 1 ? 's' : ''} to <strong>${ev.title}</strong> — order <span class="mono">${orderId}</span>.</p>
+          <span class="badge">Demo order — saved to the server, no real charge occurred</span>
+        </div>
+        <a href="/" class="btn">Browse more events</a>
+      `;
+    }
+
+    if (!ev) { renderNotFound(); } else { renderForm(); }
+  </script>
+</body>
+</html>

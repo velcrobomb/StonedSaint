@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upcoming Events</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a href="/" class="brand">TICKET<span>STUB</span></a>
+  </div>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">All events</p>
+      <h1>Get in the door</h1>
+      <p>Browse what's coming up and grab your tickets.</p>
+    </div>
+
+    <div id="grid" class="stub-grid"></div>
+  </main>
+
+  <script src="events.js"></script>
+  <script>
+    function renderEvents() {
+      const grid = document.getElementById('grid');
+      if (!EVENTS.length) {
+        grid.innerHTML = '<div class="empty">No events on sale right now. Check back soon.</div>';
+        return;
+      }
+      grid.innerHTML = EVENTS.map(ev => {
+        const dateStr = new Date(ev.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        return `
+          <a class="stub" href="/purchase.html?id=${encodeURIComponent(ev.id)}">
+            <div class="stub-image" style="${ev.imageUrl ? `background-image:url('${ev.imageUrl}')` : ''}"></div>
+            <div class="stub-body">
+              <div class="stub-date">${dateStr}</div>
+              <div class="stub-title">${ev.title}</div>
+              <p class="stub-loc">${ev.location || ''}</p>
+            </div>
+            <div class="stub-perf"></div>
+            <div class="stub-foot">
+              <span>From</span>
+              <span class="stub-price">$${ev.price.toFixed(2)}</span>
+            </div>
+          </a>`;
+      }).join('');
+    }
+    renderEvents();
+  </script>
+</body>
+</html>
